@@ -37,7 +37,7 @@ def login():
     else:
         # Inicio de sesión fallido
         flash('Credenciales incorrectas. Por favor, inténtalo de nuevo.', 'error')
-        return redirect(url_for('index'))
+        return redirect(url_for('index'))#s
 
 @app.route('/dashboard')
 def dashboard():
@@ -53,9 +53,11 @@ def logout():
     session.pop('username', None)
     return redirect(url_for('index'))
 
+
+
 @app.route('/nueva_pizarra')
 def nueva_pizarra():
-    return render_template('pizarraexecute.html')
+  return render_template('pizarraexecute.html')
 
 @app.route('/trueValidacion')
 def truevalidate():
@@ -64,6 +66,10 @@ def truevalidate():
 @app.route('/Exit')
 def salir():
     return render_template('login.html')
+
+#@app.route('/Register')
+#def register():
+#return render_template('register.html')
 
 @app.route('/registerFunc', methods=['POST'])
 def registerFunc():
@@ -89,17 +95,9 @@ def registerFunc():
         # Si la solicitud no es de tipo POST, redirige al usuario a la página de registro.
         return render_template('register.html')
 
-@socketio.on('connect')
-def handle_connect():
-    print('Usuario conectado')
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    print('Usuario desconectado')
-
 @socketio.on('message')
 def handle_message(message):
-    socketio.emit('message', message)
+    socketio.emit('message', message) 
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
