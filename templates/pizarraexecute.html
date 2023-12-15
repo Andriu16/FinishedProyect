@@ -8,45 +8,176 @@
     <title>Collaborative Whiteboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.5.0/fabric.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
+    <link rel="shortcut icon" type="image/ico" href="favicon.ico" />
+
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v6.0.0-beta1/css/all.css" />
+
 </head>
 <style>
-
     body {
         color: white;
         overflow: hidden;
         background-color: #333333;
     }
-
-   
 </style>
+<style>
+    /* Agrega estilos según tus preferencias */
+    
+
+    .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .toolbar button {
+        padding: 10px;
+        margin-right: 10px;
+        background-color: #3498db;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .toolbar textarea {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        resize: none;
+    }
+</style>
+
+
 
 <body>
     <div id="whiteboard"></div>
     <canvas id="canvas" width="1528" height="790"> </canvas>
+    <div class="toolbar">
+       <div>
+        <textarea id="addTextField" placeholder="Inserta tu texto aquí"></textarea> 
+        <button onclick="addTextToCanvas()">
+            <i class="fas fa-font"></i> Insertar Texto
+        </button>
+        <button onmousedown="startDrawingTriangle()" onmouseup="stopDrawingTriangle()">
+            <i class="fas fa-pen"></i> Dibujar Triángulo
+        </button>
+        </div>
+        <button onclick="clearCanvas()">
+            <i class="fas fa-trash-alt"></i> Borrar Lienzo
+        </button>
+       
+    </div>
     <script>
-        window.embeddedChatbotConfig = {
-        chatbotId: "PdTrNDUFeKpWExsl1zrwj",
-        domain: "www.chatbase.co"
+        // ... Tu código JavaScript existente ...
+    
+        var drawingTriangle; // Variable para almacenar la instancia de fabric.Triangle durante el dibujo
+    
+        function startDrawingTriangle() {
+            // Crear un triángulo temporal para interactuar con el usuario
+            drawingTriangle = new fabric.Triangle({
+                width: 0,
+                height: 0,
+                fill: 'blue',
+                left: 0,
+                top: 0,
+            });
+    
+            // Agregar el triángulo al lienzo
+            canvas.add(drawingTriangle);
+    
+            // Configurar la funcionalidad de dibujo de forma libre en el lienzo
+            canvas.isDrawingMode = true;
+            canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+    
+            // Actualizar el triángulo mientras el usuario dibuja
+            canvas.on('mouse:move', function (event) {
+                if (drawingTriangle && event.target === null) {
+                    const pointer = canvas.getPointer(event.e);
+                    drawingTriangle.set({
+                        width: pointer.x - drawingTriangle.left,
+                        height: pointer.y - drawingTriangle.top,
+                    });
+                    canvas.renderAll();
+                }
+            });
+    
+            // Agregar un evento para manejar la creación del triángulo cuando se complete el dibujo
+            canvas.on('mouse:up', function (event) {
+                canvas.off('mouse:move');
+                canvas.off('mouse:up');
+    
+                // Eliminar el triángulo temporal
+                canvas.remove(drawingTriangle);
+    
+                // Crear un triángulo final con las dimensiones finales
+                const finalTriangle = new fabric.Triangle({
+                    width: drawingTriangle.width,
+                    height: drawingTriangle.height,
+                    fill: 'blue',
+                    left: drawingTriangle.left,
+                    top: drawingTriangle.top,
+                });
+    
+                // Agregar el triángulo final al lienzo
+                canvas.add(finalTriangle);
+    
+                // Enviar el estado actualizado al servidor a través de SocketIO
+                var dataUrl = canvas.toDataURL();
+                socket.emit('canvasState', dataUrl);
+    
+                // Detener la funcionalidad de dibujo de forma libre
+                stopDrawingTriangle();
+            });
         }
-        </script>
-        <script
-        src="https://www.chatbase.co/embed.min.js"
-        chatbotId="PdTrNDUFeKpWExsl1zrwj"
-        domain="www.chatbase.co"
-        defer>
-        </script>
+    
+        function stopDrawingTriangle() {
+            // Desactivar la funcionalidad de dibujo de forma libre y restaurar la funcionalidad predeterminada de dibujo (líneas)
+            canvas.isDrawingMode = false;
+            canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+        }
+    
+        function clearCanvas() {
+            canvas.clear();
+            var dataUrl = canvas.toDataURL();
+            socket.emit('canvasState', dataUrl);
+        }
+    
+        // ... Resto de tu código JavaScript ...
+    </script>
     
 
+
+
+
+
+
+
+
+
     <script>
-        var socket = io.connect('https://' + document.domain + ':' + location.port);
+        window.embeddedChatbotConfig = {
+            chatbotId: "PdTrNDUFeKpWExsl1zrwj",
+            domain: "www.chatbase.co"
+        }
+    </script>
+    <script src="https://www.chatbase.co/embed.min.js" chatbotId="PdTrNDUFeKpWExsl1zrwj" domain="www.chatbase.co"
+        defer></script>
+
+
+    <script>
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+
 
         var canvas = new fabric.Canvas('canvas', {
             isDrawingMode: true
         });
 
+
         // Configurar el pincel de dibujo
         canvas.freeDrawingBrush.color = 'black';
-        canvas.freeDrawingBrush.width = 5;
+        canvas.freeDrawingBrush.width = 10;  // Puedes ajustar el ancho según tus preferencias
 
         // Deshabilitar el relleno de las formas
         canvas.freeDrawingBrush.fill = null;
@@ -56,40 +187,88 @@
 
         canvas.on('path:created', function (options) {
             var path = options.path;
-            var message = {
-                type: 'draw',
-                path: path
-            };
-            socket.emit('message', message);
+            var dataUrl = canvas.toDataURL();  // Obtén la representación del lienzo como imagen
+            socket.emit('canvasState', dataUrl);  // Envía el estado al servidor
         });
 
-        socket.on('message', function (message) {
-            if (message.type === 'draw') {
-                var path = new fabric.Path(message.path.path, {
-                    fill: null,
-                    stroke: 'black'
-                });
-                canvas.add(path);
+        function activarBorrador() {
+            canvas.clear();
+            canvas.freeDrawingBrush.color = 'white';  // Cambia el color del pincel a blanco para simular el borrador
+            var dataUrl = canvas.toDataURL();  // Obtén la representación del lienzo como imagen
+            socket.emit('canvasState', dataUrl);  // Envía el estado al servidor
+        }
+
+        socket.on('canvasState', function (dataUrl) {
+            canvas.clear();
+            fabric.Image.fromURL(dataUrl, function (img) {
+                canvas.add(img);  // Agrega la imagen al lienzo
                 canvas.renderAll();
-            }
+            });
         });
 
         function runCode() {
             socket.emit('message', { 'code': 'java code to be executed' });
         }
 
+        
+
         socket.on('message', function (message) {
             // Maneja el mensaje recibido del servidor (salida del código ejecutado)
             // ...
         });
 
+        function addTextToCanvas() {
+            // Obtener el texto del área de texto
+            let text = document.getElementById('addTextField').value;
+
+            // Crear un objeto de texto de fabric.js
+            const textObject = new fabric.Textbox(text, {
+                fontSize: 20, // Ajusta el tamaño según tus preferencias
+                fill: 'black', // Ajusta el color según tus preferencias
+                fontFamily: 'serif',
+            });
+
+            // Agregar el objeto de texto al lienzo
+            canvas.add(textObject);
+
+            // Centrar el objeto de texto en el medio del lienzo
+            textObject.set({
+                left: (canvas.width - textObject.width) / 2,
+                top: (canvas.height - textObject.height) / 2,
+            });
+            var dataUrl = canvas.toDataURL();
+            socket.emit('canvasState', dataUrl);
+
+        // Enviar el texto al servidor a través de SocketIO
+            socket.emit('addTextToCanvas', { text: text });
+        }
+
+
+        function clearCanvas() {
+        canvas.clear();
+        var dataUrl = canvas.toDataURL();
+        socket.emit('canvasState', dataUrl);
+        }
+
+        // Añade un botón de borrador en el HTML
+        //document.body.insertAdjacentHTML('beforeend', '<button onclick="borrador()">Borrador</button>');
+
+        // Función para activar/desactivar el modo borrador
+        //function borrador() {
+        // Cambia el color del pincel a blanco para simular el borrador
+        //  canvas.freeDrawingBrush.color = 'white';
+        //}
 
 
 
+        
 
+        // Emit the text object through socket.io
 
 
     </script>
+
+
 </body>
 
 </html>
