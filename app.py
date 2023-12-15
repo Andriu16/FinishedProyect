@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import mysql.connector
 import os
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO,emit
 
 app = Flask(__name__)
 app.secret_key = '123456'
@@ -9,11 +9,10 @@ socketio = SocketIO(app)
 
 # Conectar a la base de datos MySQL
 conn = mysql.connector.connect(
-    host='sql10.freemysqlhosting.net',
-    user='sql10669945',
-    password='AALFWDxYfK',
-    database='sql10669945',
-    port=3306
+    host='localhost',
+    user='root',
+    password='123456',
+    database='pizarraColavorativa'
 )
 cur = conn.cursor()
 
@@ -95,10 +94,22 @@ def registerFunc():
         # Si la solicitud no es de tipo POST, redirige al usuario a la página de registro.
         return render_template('register.html')
 
-@socketio.on('message')
-def handle_message(message):
-    socketio.emit('message', message) 
+
+
+@socketio.on('addTextToCanvas')
+def handle_add_text(data):
+    emit('addTextToCanvas', data, broadcast=True)
+
+@socketio.on('canvasState')
+def handle_canvas_state(data_url):
+    emit('canvasState', data_url, broadcast=True)
+    
+@socketio.on('clearCanvas')
+def handle_clear_canvas():
+    emit('clearCanvas', broadcast=True)
+
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port)
+    #app.run(debug=True)
+    socketio.run(app)
+    
