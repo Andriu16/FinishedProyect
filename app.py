@@ -9,10 +9,11 @@ socketio = SocketIO(app)
 
 # Conectar a la base de datos MySQL
 conn = mysql.connector.connect(
-    host='localhost',
-    user='root',
-    password='123456',
-    database='pizarraColavorativa'
+    host='sql10.freemysqlhosting.net',
+    user='sql10669945',
+    password='AALFWDxYfK',
+    database='sql10669945',
+    port=3306
 )
 cur = conn.cursor()
 
